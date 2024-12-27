@@ -4,10 +4,12 @@ from github.GithubException import GithubException
 from github import Github, Auth
 from github.ContentFile import ContentFile
 from dotenv import load_dotenv
+from core.models.comment import Comment
 
 class GitHubRepository:
     def __init__(self, github_access_token=None, repo_owner=None, repo_name=None, pr_number=None):
-        load_dotenv()
+        if not load_dotenv():
+            raise ValueError("Warning: .env file not found. Ensure it exists in the project's root directory.")
         github_access_token = github_access_token or os.getenv("GITHUB_ACCESS_TOKEN")
         if not github_access_token:
             raise ValueError("GitHub token is required. Set it as an environment variable or pass it as an argument.")
@@ -42,4 +44,33 @@ class GitHubRepository:
             if(githubException.status == 404):
                 # If the file didn't exist on the target branch of the PR then all changes are new content
                 return ""
-            
+
+    def add_comment_to_file(self, text: str, file_path: str, line: int, commit_sha: str = None):
+        """
+        Adds a comment to a specified file in a pull request at a provided line.
+
+        This function creates a comment on a specific file in a pull request at the given
+        line. It uses the specified commit SHA or defaults to the last commit in the pull
+        request if none is provided. The created comment is then returned as a Comment model.
+
+        Args:
+            text (str): The text content of the comment to be added.
+            file_path (str): The file path in the repository where the comment will
+                be added.
+            line (int): The line number in the file where the comment will be added.
+            commit_sha (str, optional): The SHA of the commit to place the comment on.
+                Defaults to the last commit in the pull request.
+
+        Returns:
+            Comment: A model representing the comment created, including the text of the
+            comment, file path, line number, and commit SHA.
+        """
+        # Get the commit in the pull request using commit_sha or get the last commit
+        commit = self.repo.get_commit(commit_sha) if commit_sha else self.pull_request.get_commits()[self.pull_request.commits - 1]
+        created_comment = self.pull_request.create_comment(text, commit, file_path, line)
+
+        # Return as a Comment model
+        return Comment(text=created_comment.body, file_path=file_path, line=line, sha=commit.sha)
+
+
+
