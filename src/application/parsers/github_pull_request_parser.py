@@ -19,23 +19,26 @@ def parse_pull_request_files(githubRepository: GitHubRepository) -> list[PullReq
     for file in files:
         file_name = file.filename
         file_diff = file.patch
-        changes = parse_changes(file_diff)
+        additions_deletions_tuple = parse_changes(file_diff)
         file_content = githubRepository.get_file_content(file_name)
+        additions = additions_deletions_tuple[0]
+        deletions = additions_deletions_tuple[1]
 
         # Combine content and changes
         content_with_lines = [ContentWithLine(line=i+1, content=lineContent) for i, lineContent in enumerate(file_content.splitlines())]
-        pull_request_file = PullRequestFile(path=file_name, content=content_with_lines, changes=changes)
+        pull_request_file = PullRequestFile(path=file_name, content=content_with_lines, additions=additions, deletions=deletions)
         pull_request_files.append(pull_request_file)
 
     return pull_request_files
 
   
-def parse_changes(file_diff) -> list[ContentWithLine]:
+def parse_changes(file_diff) -> tuple:
     """Parse the changes from a file's diff and calculate line numbers."""
     if(file_diff is None):
-      return [ContentWithLine(content="", line=0)]
+      return ([ContentWithLine(content="", line=0)], [ContentWithLine(content="", line=0)])
     
-    changes: list[ContentWithLine] = []
+    additions: list[ContentWithLine] = []
+    deletions: list[ContentWithLine] = []
     current_line_number = None
     for line in file_diff.splitlines():
         if line.startswith("@@"):
@@ -47,13 +50,15 @@ def parse_changes(file_diff) -> list[ContentWithLine]:
         elif line.startswith("+") and not line.startswith("+++"):
             # Add lines (from the new file)
             new_change = ContentWithLine(line=current_line_number, content=line[1:])
-            changes.append(new_change)
+            additions.append(new_change)
             current_line_number += 1
         elif line.startswith("-") and not line.startswith("---"):
-            # Skip removed lines (we're focused on additions/changes)
+            new_deletion = ContentWithLine(line=current_line_number, content=line[1:])
+            deletions.append(new_deletion)
+            current_line_number += 1
             continue
         else:
             # Context lines; increment line number
             if current_line_number is not None:
                 current_line_number += 1
-    return changes
+    return (additions, deletions)

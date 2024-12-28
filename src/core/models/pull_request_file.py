@@ -13,4 +13,5 @@ class PullRequestFile(BaseModel):
   """
   path: str
   content: list[ContentWithLine]
-  changes: list[ContentWithLine]
+  additions: list[ContentWithLine]
+  deletions: list[ContentWithLine]
