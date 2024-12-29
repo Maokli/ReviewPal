@@ -45,7 +45,7 @@ class GitHubRepository:
                 # If the file didn't exist on the target branch of the PR then all changes are new content
                 return ""
 
-    def add_comment_to_file(self, text: str, file_path: str, line: int, commit_sha: str = None):
+    def add_comment_to_file(self, text: str, file_path: str, line: int, commit_sha: str = None) -> Comment:
         """
         Adds a comment to a specified file in a pull request at a provided line.
 
