@@ -33,6 +33,28 @@ class ReviewPromptTemplate:
 
         return PromptTemplate(input_variables=["file_changes"], template=template)
 
+class FileAnalysisPromptTemplate:
+    @staticmethod
+    def get_template() -> PromptTemplate:
+        """Returns a PromptTemplate for analyzing whether a file needs review."""
+        template = (
+            "You are a senior Python developer analyzing whether code changes need comments.\n"
+            "Analyze the following code changes and determine if they need comments based on these criteria:\n"
+            "1. Complexity of the changes\n"
+            "2. Introduction of new patterns or techniques\n"
+            "3. Potential impact on existing functionality\n"
+            "4. Clarity of the code\n"
+            "5. Best practices and conventions\n\n"
+            "Code changes:\n"
+            "{file_changes}\n\n"
+            "Respond in the following JSON format:\n"
+            "{{\n"
+            "    \"reasoning\": \"<explanation of your decision>\"\n"
+            "    \"needs_comments\": true/false,\n"
+            "}}\n"
+        )
+        return PromptTemplate(input_variables=["file_changes"], template=template)
+
 # Example usage
 if __name__ == "__main__":
     prompt_template = ReviewPromptTemplate.get_template()
