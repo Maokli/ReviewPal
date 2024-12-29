@@ -71,8 +71,13 @@ class AddCommentTool(BaseTool):
           int: the exact line where the given change happened
       """
       changes = self._pull_request_file.additions + self._pull_request_file.deletions
-      
-      return next(change.line for change in changes if change.content == line)
+
+      try:
+          # Search for the change whose content matches the given line's content
+          return next(change.line for change in changes if change.content == line)
+      except StopIteration:
+          # Handle the case where no matching line is found
+          raise ValueError(f"No matching line found for the given content: {line}")
 
 
 if __name__ == "__main__":
