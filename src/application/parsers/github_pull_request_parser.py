@@ -3,6 +3,11 @@ from core.models.pull_request import PullRequest
 from core.models.pull_request_file import PullRequestFile
 from infrastructure.repositories.github_repository import GitHubRepository
 
+# A list of lines git adds to files that we should ignore as they are invisible in the commit
+git_lines_to_ignore = [
+    '\\ No newline at end of file'
+]
+
 def parse_pull_request(githubRepository: GitHubRepository) -> PullRequest:
     """Convert a GitHub pull request into the desired file structure."""
     pull_request_title = githubRepository.get_pull_request_title()
@@ -34,31 +39,44 @@ def parse_pull_request_files(githubRepository: GitHubRepository) -> list[PullReq
   
 def parse_changes(file_diff) -> tuple:
     """Parse the changes from a file's diff and calculate line numbers."""
-    if(file_diff is None):
-      return ([ContentWithLine(content="", line=0)], [ContentWithLine(content="", line=0)])
+    if file_diff is None:
+        return ([ContentWithLine(content="", line=0)], [ContentWithLine(content="", line=0)])
     
     additions: list[ContentWithLine] = []
     deletions: list[ContentWithLine] = []
-    current_line_number = None
+    old_file_line = None  # Line number for the old file (deletions)
+    new_file_line = None  # Line number for the new file (additions)
+    
     for line in file_diff.splitlines():
+        if line in git_lines_to_ignore:
+            continue
+        
         if line.startswith("@@"):
-            # Extract the starting line number for the modified file
+            # Extract line numbers from hunk header
             # Example: @@ -1,4 +1,4 @@
             parts = line.split(" ")
+            old_file_section = parts[1]  # Example: "-1,4"
             new_file_section = parts[2]  # Example: "+1,4"
-            current_line_number = int(new_file_section.split(",")[0][1:])  # Start at the new file's line number
+            
+            # Parse starting line numbers
+            old_file_line = int(old_file_section.split(",")[0][1:])  # Line in the old file
+            new_file_line = int(new_file_section.split(",")[0][1:])  # Line in the new file
+        
         elif line.startswith("+") and not line.startswith("+++"):
-            # Add lines (from the new file)
-            new_change = ContentWithLine(line=current_line_number, content=line[1:])
+            # Additions (new file line numbers)
+            new_change = ContentWithLine(line=new_file_line, content=line[1:])
             additions.append(new_change)
-            current_line_number += 1
+            new_file_line += 1
         elif line.startswith("-") and not line.startswith("---"):
-            new_deletion = ContentWithLine(line=current_line_number, content=line[1:])
+            # Deletions (old file line numbers)
+            new_deletion = ContentWithLine(line=old_file_line, content=line[1:])
             deletions.append(new_deletion)
-            current_line_number += 1
-            continue
+            old_file_line += 1
         else:
-            # Context lines; increment line number
-            if current_line_number is not None:
-                current_line_number += 1
+            # Context lines; increment both line numbers
+            if old_file_line is not None:
+                old_file_line += 1
+            if new_file_line is not None:
+                new_file_line += 1
+    
     return (additions, deletions)

@@ -35,8 +35,8 @@ def remove_changes_markers_from_overlap(chunks: list[Document]):
 def split_pull_request_file(pull_request_file_text: str):
   text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
     model_name="gpt-4",
-    chunk_size=100,
-    chunk_overlap=20,
+    chunk_size=500,
+    chunk_overlap=50,
   )
   chunks = text_splitter.create_documents([pull_request_file_text])
   chunks = remove_changes_markers_from_overlap(chunks=chunks)
