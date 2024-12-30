@@ -1,5 +1,6 @@
 from langchain.prompts import PromptTemplate
 
+
 class ReviewPromptTemplate:
     @staticmethod
     def get_template() -> PromptTemplate:
