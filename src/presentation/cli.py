@@ -29,7 +29,7 @@ def get_pull_request_info_from_github_url(url: str) -> tuple:
     # Extract components from the matched groups
     repo_owner = match.group("repo_owner")
     repo_name = match.group("repo_name")
-    pull_request_number = match.group("pull_request_number")
+    pull_request_number = int(match.group("pull_request_number"))
     
     return repo_owner, repo_name, pull_request_number
 
@@ -57,7 +57,7 @@ def main():
           "Error: .env file not found. Ensure it exists in the project's root directory."
       )
     
-    url = get_url_from_args();
+    url = get_url_from_args()
     llm = ChatOpenAI(
         model="gpt-4o-mini",
         temperature=0,
@@ -66,13 +66,12 @@ def main():
         max_retries=2,
     )
     
-    
     # Call the function with the provided URL
     try:
         repo_owner, repo_name, pull_request_number = get_pull_request_info_from_github_url(url)
         
-        review_agent = ReviewAgent(repo_owner=repo_owner, repo_name=repo_name, pull_request_number=pull_request_number)
-        review_agent.review_pull_request();
+        review_agent = ReviewAgent(llm=llm, repo_owner=repo_owner, repo_name=repo_name, pr_number=pull_request_number)
+        review_agent.review_pull_request()
     except ValueError as e:
         print(e)
 
