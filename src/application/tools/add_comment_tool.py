@@ -17,7 +17,7 @@ class AddCommentInput(BaseModel):
     comments_to_add: list[LlmComment] = Field(description="should be a list of LlmComment")
 
 class AddCommentTool(BaseTool):
-    name: str = "Add comment tool"
+    name: str = "add_comment_tool"
     description: str = "Adds comments on git."
     args_schema: Type[BaseModel] = AddCommentInput
     return_direct: bool = True
@@ -44,6 +44,7 @@ class AddCommentTool(BaseTool):
         try:
           for comment_to_add in comments_to_add:
             line = self._get_change_line_from_file(comment_to_add.line_content)
+            print(f"line content: {comment_to_add.line_content}")
             comment = Comment(text=comment_to_add.comment, file_path=self._pull_request_file.path, line=line)
             self._add_comment_to_file_use_case.invoke(githubRepository=self._gitHubRepository, comment=comment)
           
