@@ -66,10 +66,6 @@ class GitHubRepository:
             comment, file path, line number, and commit SHA.
         """
         # Get the commit in the pull request using commit_sha or get the last commit
-        print(f"commit_sha: {commit_sha}")
-        print(f"text: {text}")
-        print(f"file_path: {file_path}")
-        print(f"line: {line}")
         commit = self.repo.get_commit(commit_sha) if commit_sha else self.pull_request.get_commits()[self.pull_request.commits - 1]
         created_comment = self.pull_request.create_comment(text, commit, file_path, line)
 
