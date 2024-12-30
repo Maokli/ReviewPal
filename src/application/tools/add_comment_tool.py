@@ -13,8 +13,12 @@ from langchain.callbacks.manager import (
 )
 from pydantic import BaseModel, Field
 
+
 class AddCommentInput(BaseModel):
-    comments_to_add: list[LlmComment] = Field(description="should be a list of LlmComment")
+    comments_to_add: list[LlmComment] = Field(
+        description="should be a list of LlmComment"
+    )
+
 
 class AddCommentTool(BaseTool):
     name: str = "add_comment_tool"
@@ -24,7 +28,7 @@ class AddCommentTool(BaseTool):
     _pull_request_file: PullRequestFile
     _add_comment_to_file_use_case: AddCommentUseCase
     _gitHubRepository: GitHubRepository
-    
+
     def __init__(
         self,
         pull_request_file,
@@ -38,23 +42,31 @@ class AddCommentTool(BaseTool):
         self._gitHubRepository = github_repository
 
     def _run(
-        self, comments_to_add: list[LlmComment], run_manager: Optional[CallbackManagerForToolRun] = None
+        self,
+        comments_to_add: list[LlmComment],
+        run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
         """Use the tool."""
         try:
-          for comment_to_add in comments_to_add:
-            line = self._get_change_line_from_file(comment_to_add.line_content)
-            print(f"line content: {comment_to_add.line_content}")
-            comment = Comment(text=comment_to_add.comment, file_path=self._pull_request_file.path, line=line)
-            self._add_comment_to_file_use_case.invoke(githubRepository=self._gitHubRepository, comment=comment)
-          
-          return "all comments added successfully"
+            for comment_to_add in comments_to_add:
+                line = self._get_change_line_from_file(comment_to_add.line_content)
+                print(f"line content: {comment_to_add.line_content}")
+                comment = Comment(
+                    text=comment_to_add.comment,
+                    file_path=self._pull_request_file.path,
+                    line=line,
+                )
+                self._add_comment_to_file_use_case.invoke(
+                    githubRepository=self._gitHubRepository, comment=comment
+                )
+
+            return "all comments added successfully"
         except StopIteration as e:
             print(e)
             return "comments not added. Error"
         except Exception as e:
-          raise e
-          return "comments not added. Error"
+            raise e
+            return "comments not added. Error"
 
     async def _arun(
         self,
@@ -77,18 +89,19 @@ class AddCommentTool(BaseTool):
         changes = self._pull_request_file.additions + self._pull_request_file.deletions
 
         # Remove the first '+' or '-' if present
-        normalized_line = line[1:] if line.startswith(('+', '-')) else line
+        normalized_line = line[1:] if line.startswith(("+", "-")) else line
 
         # Normalize content by replacing single quotes with double quotes and removing trailing semicolons
         def normalize_content(content: str) -> str:
-            return content.replace("'", '"').rstrip(';')
+            return content.replace("'", '"').rstrip(";")
 
         # Step 1: Search for an exact match with normalized quotes
         try:
             return next(
                 change.line
                 for change in changes
-                if normalize_content(change.content) == normalize_content(normalized_line)
+                if normalize_content(change.content)
+                == normalize_content(normalized_line)
             )
         except StopIteration:
             # Step 2: If no exact match, try ignoring both leading whitespaces and quote differences
@@ -98,7 +111,8 @@ class AddCommentTool(BaseTool):
                 return next(
                     change.line
                     for change in changes
-                    if normalize_content(change.content.lstrip()) == normalized_line_no_indent
+                    if normalize_content(change.content.lstrip())
+                    == normalized_line_no_indent
                 )
             except StopIteration:
                 # Handle the case where no matching line is found, even after all normalizations
@@ -108,12 +122,24 @@ class AddCommentTool(BaseTool):
                     f"in the file's changes: {changes}"
                 )
 
+
 if __name__ == "__main__":
     get_pull_request_use_case = GetPullRequestUseCase()
     add_comment_use_case = AddCommentUseCase()
-    githubRepository = GitHubRepository(repo_owner="Maokli", repo_name="ReviewPal", pr_number=2)
+    githubRepository = GitHubRepository(
+        repo_owner="Maokli", repo_name="ReviewPal", pr_number=2
+    )
     pull_request = get_pull_request_use_case.invoke(githubRepository=githubRepository)
-    pull_request_file = pull_request.files[0];
-    add_comment_tool = AddCommentTool(pull_request_file=pull_request_file, add_comment_to_file_use_case=add_comment_use_case, github_repository=githubRepository);
-    comments_to_add: list[LlmComment] = [LlmComment(line_content=pull_request_file.additions[0].content, comment="testing the AddCommentTool")]
+    pull_request_file = pull_request.files[0]
+    add_comment_tool = AddCommentTool(
+        pull_request_file=pull_request_file,
+        add_comment_to_file_use_case=add_comment_use_case,
+        github_repository=githubRepository,
+    )
+    comments_to_add: list[LlmComment] = [
+        LlmComment(
+            line_content=pull_request_file.additions[0].content,
+            comment="testing the AddCommentTool",
+        )
+    ]
     add_comment_tool._run(comments_to_add)
