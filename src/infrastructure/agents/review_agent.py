@@ -18,17 +18,6 @@ from application.parsers.github_pull_request_parser import parse_pull_request
 from application.parsers.llm_text_pull_request_parser import parse_pull_request_to_text
 from application.text_splitters.pull_request_file_text_splitter import split_pull_request_file
 
-
-if not load_dotenv():
-    raise ValueError("Warning: .env file not found. Ensure it exists in the project's root directory.")
-
-
-class ReviewAgentTools:
-    """Helper class to create and manage tools for the review agent"""
-
-
-
-
 class ReviewAgent:
     """
     ReviewAgent integrates LLM and the AddCommentTool to generate and add comments to pull requests.
@@ -67,32 +56,22 @@ class ReviewAgent:
         """
         Process the pull request files and generate comments for each file.
         """
-        langchain.debug = True
-
 
         parsed_content = parse_pull_request(self.github_repository)
 
-        for file_index, pr_file in enumerate(parsed_content.files):
-            print(
-                f"\nAnalyzing file {pr_file.path} with {len(pr_file.additions)} additions and {len(pr_file.deletions)} deletions.")
+        for pr_file in parsed_content.files:
+            pull_request_file = parse_pull_request_to_text(pr_file)
 
-            pull_request_file = parse_pull_request_to_text(parsed_content.files[file_index])
-
-
-            @tool
-            def add_comment_tool_function(listtf: list[LlmComment]):
-                """ useful when adding a comment"""
-                add_comment_tool = AddCommentTool(
-                    pull_request_file=pr_file,
-                    add_comment_to_file_use_case=self.add_comment_use_case,
-                    github_repository=self.github_repository,
-                )
-                return add_comment_tool._run(listtf)
+            add_comment_tool = AddCommentTool(
+                pull_request_file=pr_file,
+                add_comment_to_file_use_case=self.add_comment_use_case,
+                github_repository=self.github_repository,
+            )
             agent = create_tool_calling_agent(llm=self.llm,
-                                              tools=[add_comment_tool_function],
+                                              tools=[add_comment_tool],
                                               prompt=self.review_prompt)
             agent_executor = AgentExecutor(agent=agent,
-                                           tools=[add_comment_tool_function],
+                                           tools=[add_comment_tool],
                                            verbose=True,
                                            handle_parsing_errors=True,
                                            return_intermediate_steps=True)
@@ -100,24 +79,22 @@ class ReviewAgent:
 
             chunks = split_pull_request_file(pull_request_file)
 
-            for index, chunk in enumerate(chunks):
-                print(f"\nReviewing Chunk {index + 1}:")
-                result = agent_executor.invoke({"file_changes": chunk, "file_path":pr_file.path}, include_run_info=True)
-                print(result)
-            break
+            for chunk in chunks:
+                agent_executor.invoke({"file_changes": chunk, "file_path":pr_file.path}, include_run_info=True)
 
 
 if __name__ == "__main__":
-    from langchain_openai import AzureChatOpenAI, ChatOpenAI
-
-    """llm = AzureChatOpenAI(
-        azure_deployment="gpt-4o-mini",
-        api_version="2024-05-01-preview",
-        temperature=0,
-        max_tokens=None,
-        timeout=None,
-        max_retries=2,
-    )"""
+    from langchain_openai import ChatOpenAI
+    load_dotenv()
+    # llm = AzureChatOpenAI(
+    #     azure_deployment="gpt-4o-mini",
+    #     api_version="2024-05-01-preview",
+    #     temperature=0,
+    #     max_tokens=None,
+    #     timeout=None,
+    #     max_retries=2,
+    # )
+    
     llm = ChatOpenAI(
         model="gpt-4o-mini",
         temperature=0,
