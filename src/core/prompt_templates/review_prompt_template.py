@@ -10,6 +10,7 @@ class ReviewPromptTemplate:
 
         :return: A PromptTemplate instance with the specified template and variables.
         """
+        # fmt: off
         template = (
             "You are a senior Python developer specializing in reviewing pull requests.\n"
             "Your task is to review code changes presented in the following format:\n"
@@ -30,17 +31,18 @@ class ReviewPromptTemplate:
             "8. Performance optimizations\n"
             "9. Readability and maintainability\n"
             "10. Any security concerns\n"
+
             "Provide comments sparingly, only when there's a real problem, major inefficiency, significant room for improvement, or notable security concerns. Avoid mentioning code from attachments unless it is truly necessary and related. Keep comments constructive and precise.\n"
             "Your output must be in the following JSON format:\n"
             "{{\n"
-            '    "analysis": {{\n'
-            '        "reasoning": "<short explanation of your analysis>",\n'
-            '        "needs_comments": true/false\n'
+            "    \"analysis\": {{\n"
+            "        \"reasoning\": \"<short explanation of your analysis>\",\n"
+            "        \"needs_comments\": true/false\n"
             "    }},\n"
-            '    "comments": [\n'
+            "    \"comments\": [\n"
             "        {{\n"
-            '            "line_content": "<line content>",\n'
-            '            "comment": "<your feedback here>"\n'
+            "            \"line_content\": \"<line content>\",\n"
+            "            \"comment\": \"<your feedback here>\"\n"
             "        }}\n"
             "    ]\n"
             "}}\n\n"
@@ -57,6 +59,4 @@ class ReviewPromptTemplate:
             "{agent_scratchpad}\n"
         )
 
-        return PromptTemplate(
-            input_variables=["file_changes", "agent_scratchpad"], template=template
-        )
+        return PromptTemplate(input_variables=["file_changes", "agent_scratchpad"], template=template)
