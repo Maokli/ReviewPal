@@ -67,7 +67,7 @@ class ReviewAgent:
         """
         Process the pull request files and generate comments for each file.
         """
-        #langchain.debug = True
+        langchain.debug = True
 
 
         parsed_content = parse_pull_request(self.github_repository)
@@ -76,7 +76,7 @@ class ReviewAgent:
             print(
                 f"\nAnalyzing file {pr_file.path} with {len(pr_file.additions)} additions and {len(pr_file.deletions)} deletions.")
 
-            pull_request = parse_pull_request_to_text(parsed_content.files[file_index])
+            pull_request_file = parse_pull_request_to_text(parsed_content.files[file_index])
 
 
             @tool
@@ -94,24 +94,32 @@ class ReviewAgent:
             agent_executor = AgentExecutor(agent=agent,
                                            tools=[add_comment_tool_function],
                                            verbose=True,
-                                           handle_parsing_errors=True,)
+                                           handle_parsing_errors=True,
+                                           return_intermediate_steps=True)
 
 
-            chunks = split_pull_request_file(pull_request)
+            chunks = split_pull_request_file(pull_request_file)
 
             for index, chunk in enumerate(chunks):
                 print(f"\nReviewing Chunk {index + 1}:")
-                result = agent_executor.invoke({"file_changes": chunk}, include_run_info=True)
+                result = agent_executor.invoke({"file_changes": chunk, "file_path":pr_file.path}, include_run_info=True)
                 print(result)
             break
 
 
 if __name__ == "__main__":
-    from langchain_openai import AzureChatOpenAI
+    from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
-    llm = AzureChatOpenAI(
+    """llm = AzureChatOpenAI(
         azure_deployment="gpt-4o-mini",
         api_version="2024-05-01-preview",
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+    )"""
+    llm = ChatOpenAI(
+        model="gpt-4o-mini",
         temperature=0,
         max_tokens=None,
         timeout=None,
@@ -122,7 +130,7 @@ if __name__ == "__main__":
         llm=llm,
         repo_owner="Maokli",
         repo_name="ReviewPal",
-        pr_number=2
+        pr_number=6
     )
 
     agent.review_pull_request()
