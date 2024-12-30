@@ -9,6 +9,7 @@ class ReviewPromptTemplate:
 
         :return: A PromptTemplate instance with the specified template and variables.
         """
+        # fmt: off
         template = (
             "You are a senior Python developer specializing in reviewing pull requests.\n"
             "Your task is to review code changes presented in the following format:\n"
