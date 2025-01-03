@@ -83,6 +83,19 @@ def parse_pull_request_to_text(pull_request_file: PullRequestFile) -> str:
     """
     content = pull_request_file.content
 
+    # Remove deletions and mark them with a "-" prefix
+    deletion_lines = {deletion.line for deletion in pull_request_file.deletions}
+    deletions_to_print = []
+
+    updated_content = []
+    for entry in content:
+        if entry.line in deletion_lines:
+            deletions_to_print.append(ContentWithLine(line=entry.line, content=f"-{entry.content}"))
+        else:
+            updated_content.append(entry)
+
+    content = updated_content
+
     # Shift lines for additions
     for addition in pull_request_file.additions:
         shift_from_index(content, addition.line, 1)
@@ -93,21 +106,12 @@ def parse_pull_request_to_text(pull_request_file: PullRequestFile) -> str:
         for addition in pull_request_file.additions
     ]
 
-    # Add additions and sort content by line number
-    content.extend(additions_to_print)
+    # Add additions and deletions, then sort content by line number
+    content.extend(deletions_to_print + additions_to_print)
     content.sort(key=lambda x: x.line)
-
-    # Prefix deletions
-    deletion_lines = {deletion.line for deletion in pull_request_file.deletions}
-    for entry in content:
-        if entry.line in deletion_lines:
-            entry.content = f"-{entry.content}"
-
-    content = reduce_unchanged_text(content=content, sequence_threshold=1)
 
     # Combine content into a single formatted string
     return "\n".join(entry.content for entry in content)
-
 
 if __name__ == "__main__":
     pull_request_file_obj = {
