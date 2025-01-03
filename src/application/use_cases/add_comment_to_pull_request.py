@@ -8,9 +8,12 @@ class AddCommentUseCase:
 
     def invoke(self, githubRepository: GitHubRepository, comment: Comment) -> Comment:
         # if add_comment_to_file change the return type we should add a parser
-        return githubRepository.add_comment_to_file(
-            comment.text, comment.file_path, comment.line, comment.sha
-        )
+        try:
+            return githubRepository.add_comment_to_file(
+                comment.text, comment.file_path, comment.line, comment.sha
+            )
+        except Exception as e:
+            raise TypeError(f"Failed to invoke AddCommentUseCase due to: {e}") from e
 
 
 if __name__ == "__main__":
