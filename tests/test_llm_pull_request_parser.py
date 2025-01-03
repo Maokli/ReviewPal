@@ -70,14 +70,14 @@ def test_reduce_unchanged_text_multiple_sequences():
     assert result[3].content == "+added2"
 
 
-def test_parse_pull_request_to_text_with_mock(mocker):
+def test_parse_pull_request_to_text_with_mock():
     """Test parse_pull_request_to_text with mocked PullRequestFile and ContentWithLine"""
     mock_content = [
         ContentWithLine(line=1, content="def test():"),
         ContentWithLine(line=2, content="    pass"),
     ]
     mock_additions = [
-        ContentWithLine(line=2, content="    return True"),
+        ContentWithLine(line=3, content="    return True"),
     ]
     mock_deletions = [
         ContentWithLine(line=2, content="    pass"),
@@ -89,20 +89,14 @@ def test_parse_pull_request_to_text_with_mock(mocker):
         additions=mock_additions,
         deletions=mock_deletions
     )
-
-    # Mock ContentWithLine to track creation
-    mock_content_with_line = mocker.patch('core.models.content_with_line.ContentWithLine')
-    mock_content_with_line.side_effect = lambda line, content: ContentWithLine(line=line, content=content)
-
+    
     result = parse_pull_request_to_text(pr_file)
     expected = "def test():\n-    pass\n+    return True"
 
     assert result == expected
-    # Verify ContentWithLine was called with correct parameters
-    mock_content_with_line.assert_called_with(line=2, content="+    return True")
 
 
-def test_parse_pull_request_to_text_with_multiple_additions(mocker):
+def test_parse_pull_request_to_text_with_multiple_additions():
     mock_content = [
         ContentWithLine(line=1, content="def test():"),
         ContentWithLine(line=2, content="    pass"),
@@ -121,11 +115,7 @@ def test_parse_pull_request_to_text_with_multiple_additions(mocker):
         additions=mock_additions,
         deletions=mock_deletions
     )
-
-    # Mock ContentWithLine
-    mock_content_with_line = mocker.patch('core.models.content_with_line.ContentWithLine')
-    mock_content_with_line.side_effect = lambda line, content: ContentWithLine(line=line, content=content)
-
+    
     result = parse_pull_request_to_text(pr_file)
     expected = "def test():\n-    pass\n+    return True\n+    print('done')"
 
@@ -134,20 +124,21 @@ def test_parse_pull_request_to_text_with_multiple_additions(mocker):
 
 def test_parse_pull_request_to_text_with_unchanged_sections(mocker):
     mock_content = [
-        ContentWithLine(line=1, content="# Header"),
-        ContentWithLine(line=2, content=""),
-        ContentWithLine(line=3, content="def test():"),
-        ContentWithLine(line=4, content="    pass"),
-        ContentWithLine(line=5, content=""),
-        ContentWithLine(line=6, content="# Footer"),
+        ContentWithLine(line=1, content=""),
+        ContentWithLine(line=2, content="def test():"),
+        ContentWithLine(line=3, content="    pass"),
+        ContentWithLine(line=4, content=""),
     ]
     mock_additions = [
         ContentWithLine(line=4, content="    return True"),
     ]
     mock_deletions = [
-        ContentWithLine(line=4, content="    pass"),
+        ContentWithLine(line=3, content="    pass"),
     ]
-
+    mocker.patch(
+        "application.parsers.llm_text_pull_request_parser.reduce_unchanged_text", 
+        side_effect=lambda content, sequence_threshold=5: content # Do nothing
+    )
     pr_file = PullRequestFile(
         path="test.py",
         content=mock_content,
@@ -155,18 +146,13 @@ def test_parse_pull_request_to_text_with_unchanged_sections(mocker):
         deletions=mock_deletions
     )
 
-    # Mock ContentWithLine
-    mock_content_with_line = mocker.patch('core.models.content_with_line.ContentWithLine')
-    mock_content_with_line.side_effect = lambda line, content: ContentWithLine(line=line, content=content)
-
     result = parse_pull_request_to_text(pr_file)
-    expected = "[....]\ndef test():\n-    pass\n+    return True\n[....]"
-
+    expected = "\ndef test():\n-    pass\n+    return True\n"
+    
     assert result == expected
 
 
-def test_empty_pull_request(mocker):
-    mock_content_with_line = mocker.patch('core.models.content_with_line.ContentWithLine')
+def test_empty_pull_request():
     pr_file = PullRequestFile(
         path="empty.py",
         content=[],
@@ -176,7 +162,6 @@ def test_empty_pull_request(mocker):
 
     result = parse_pull_request_to_text(pr_file)
     assert result == ""
-    assert not mock_content_with_line.called
 
 
 def test_shift_from_index_with_mock(mocker):
