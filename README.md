@@ -100,7 +100,7 @@ In case AZURE OPEN AI is chosen, you will need to change the client in the src/p
    Ensure that requirements are installed.
 
 2. **Run the Agent:**
-  Run the following url
+  Run the following command
 
    ```bash
    python .∕src∕presentation∕cli.py --url {pull request url}
@@ -110,7 +110,11 @@ In case AZURE OPEN AI is chosen, you will need to change the client in the src/p
   ```bash
   python ./src/presentation/cli.py --url https://github.com/Maokli/ReviewPal/pull/9
   ```
-
+3. **Running tests**
+  To run unit tests just run the following command
+   ```bash
+   pytest
+   ```
 
 ### Troubleshooting
 
